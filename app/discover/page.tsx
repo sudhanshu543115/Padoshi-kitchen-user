@@ -108,62 +108,72 @@ export default function DiscoverPage() {
               <div className="w-10 h-10 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mb-4"></div>
               <p className="text-gray-500 font-medium">Finding nearby kitchens...</p>
             </div>
-          ) : filteredRestaurants.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
-              <p className="text-gray-500">{restaurants.length === 0 ? "No kitchens found in this range." : "No kitchens match your society filter."}</p>
-              <button
-                onClick={() => { setRange(5); setFilterSociety(""); fetchKitchens(); }}
-                className="mt-4 text-orange-600 font-medium cursor-pointer"
-              >
-                Clear all filters
-              </button>
-            </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredRestaurants.map((r) => (
-                <div key={r.id} className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-gray-100">
-                  <div className="relative h-48 w-full overflow-hidden">
-                    <Image
-                      src={r.img}
-                      alt="img"
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg text-xs font-bold text-gray-800 shadow-sm z-10">
-                      ⭐ {r.rating}
+            <div className="space-y-6">
+              {filteredRestaurants.length === 0 && restaurants.length > 0 && (
+                <div className="bg-orange-50 border-l-4 border-orange-500 p-4 rounded-r-lg">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <span className="text-xl">📍</span>
                     </div>
-                    {!r.isOnline && (
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[1px]">
-                        <span className="bg-white/90 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-800">Closed</span>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-orange-800">
+                        No exact matches found for "{filterSociety}"
+                      </h3>
+                      <div className="mt-1 text-sm text-orange-700">
+                        <p>Showing you some great kitchens nearby instead!</p>
                       </div>
-                    )}
-                  </div>
-
-                  <div className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-orange-600">{r.category}</span>
-                        <h2 className="text-lg font-bold text-gray-900 leading-tight">{r.name}</h2>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 flex items-center text-sm text-gray-500">
-                      <span className="truncate text-black">📍 {r.society}</span>
-                    </div>
-
-                    <div className="mt-4 pt-4 border-t border-gray-50 flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-700">{r.distance}</span>
-                      <button
-                        onClick={() => router.push(`/restaurant/${r.id}`)}
-                        className={`text-sm font-bold ${r.isOnline ? "text-orange-600 hover:text-orange-700" : "text-gray-400 cursor-not-allowed"} cursor-pointer`}
-                        disabled={!r.isOnline}
-                      >
-                        {r.isOnline ? "View Menu →" : "Offline"}
-                      </button>
                     </div>
                   </div>
                 </div>
-              ))}
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {(filteredRestaurants.length > 0 ? filteredRestaurants : restaurants).map((r) => (
+                  <div key={r.id} className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+                    <div className="relative h-48 w-full overflow-hidden">
+                      <Image
+                        src={r.img}
+                        alt="img"
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg text-xs font-bold text-gray-800 shadow-sm z-10">
+                        ⭐ {r.rating}
+                      </div>
+                      {!r.isOnline && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[1px]">
+                          <span className="bg-white/90 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-800">Closed</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-orange-600">{r.category}</span>
+                          <h2 className="text-lg font-bold text-gray-900 leading-tight">{r.name}</h2>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex items-center text-sm text-gray-500">
+                        <span className="truncate text-black">📍 {r.society}</span>
+                      </div>
+
+                      <div className="mt-4 pt-4 border-t border-gray-50 flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-700">{r.distance}</span>
+                        <button
+                          onClick={() => router.push(`/restaurant/${r.id}`)}
+                          className={`text-sm font-bold ${r.isOnline ? "text-orange-600 hover:text-orange-700" : "text-gray-400 cursor-not-allowed"} cursor-pointer`}
+                          disabled={!r.isOnline}
+                        >
+                          {r.isOnline ? "View Menu →" : "Offline"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

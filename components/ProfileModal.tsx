@@ -17,6 +17,37 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
 
   const isView = mode === "view";
 
+  /* ================= GEOLOCATION HANDLER (ADDED) ================= */
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      setError(true);
+      setMessage("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { longitude, latitude } = position.coords;
+
+        setUser({
+          ...user,
+          geoLocation: {
+            ...user.geoLocation,
+            coordinates: [longitude, latitude],
+          },
+        });
+
+        setError(false);
+        setMessage("Location fetched successfully 📍");
+      },
+      () => {
+        setError(true);
+        setMessage("Failed to get location. Please allow location access.");
+      }
+    );
+  };
+  /* =============================================================== */
+
   const handleUpdateProfile = async () => {
     setLoading(true);
     setMessage("");
@@ -28,8 +59,8 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
         defaultLocation: {
           address: user.address,
           societyName: user.societyName,
-          geoLocation: user.geoLocation
-        }
+          geoLocation: user.geoLocation,
+        },
       });
 
       if (response.data.success) {
@@ -38,7 +69,10 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
       }
     } catch (err: any) {
       setError(true);
-      setMessage(err.response?.data?.message || "Failed to update profile. Please try again.");
+      setMessage(
+        err.response?.data?.message ||
+          "Failed to update profile. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -53,14 +87,20 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
 
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-semibold text-gray-600 mb-1 block">Full Name</label>
+            <label className="text-sm font-semibold text-gray-600 mb-1 block">
+              Full Name
+            </label>
             {isView ? (
-              <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-800 font-medium">{user.fullName}</p>
+              <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-800 font-medium">
+                {user.fullName}
+              </p>
             ) : (
               <input
                 type="text"
                 value={user.fullName}
-                onChange={(e) => setUser({ ...user, fullName: e.target.value })}
+                onChange={(e) =>
+                  setUser({ ...user, fullName: e.target.value })
+                }
                 className="w-full p-3 text-black border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
                 placeholder="Enter your full name"
               />
@@ -68,14 +108,20 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
           </div>
 
           <div>
-            <label className="text-sm font-semibold text-gray-600 mb-1 block">Address</label>
+            <label className="text-sm font-semibold text-gray-600 mb-1 block">
+              Address
+            </label>
             {isView ? (
-              <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-black font-medium">{user.address}</p>
+              <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-black font-medium">
+                {user.address}
+              </p>
             ) : (
               <input
                 type="text"
                 value={user.address}
-                onChange={(e) => setUser({ ...user, address: e.target.value })}
+                onChange={(e) =>
+                  setUser({ ...user, address: e.target.value })
+                }
                 className="w-full p-3 border border-gray-200 text-black rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
                 placeholder="Enter your address"
               />
@@ -83,14 +129,20 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
           </div>
 
           <div>
-            <label className="text-sm font-semibold text-gray-600 mb-1 block">Society Name</label>
+            <label className="text-sm font-semibold text-gray-600 mb-1 block">
+              Society Name
+            </label>
             {isView ? (
-              <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-800 font-medium">{user.societyName}</p>
+              <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-800 font-medium">
+                {user.societyName}
+              </p>
             ) : (
               <input
                 type="text"
                 value={user.societyName}
-                onChange={(e) => setUser({ ...user, societyName: e.target.value })}
+                onChange={(e) =>
+                  setUser({ ...user, societyName: e.target.value })
+                }
                 className="w-full p-3 border text-black border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
                 placeholder="Enter your society name"
               />
@@ -98,47 +150,79 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
           </div>
 
           {!isView && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-semibold text-gray-600 mb-1 block">Longitude</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={user.geoLocation.coordinates[0]}
-                  onChange={(e) => setUser({
-                    ...user,
-                    geoLocation: {
-                      ...user.geoLocation,
-                      coordinates: [parseFloat(e.target.value), user.geoLocation.coordinates[1]]
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 mb-1 block">
+                    Longitude
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={user.geoLocation.coordinates[0]}
+                    onChange={(e) =>
+                      setUser({
+                        ...user,
+                        geoLocation: {
+                          ...user.geoLocation,
+                          coordinates: [
+                            parseFloat(e.target.value),
+                            user.geoLocation.coordinates[1],
+                          ],
+                        },
+                      })
                     }
-                  })}
-                  className="w-full p-3 border text-black border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
-                  placeholder="Longitude"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-600 mb-1 block">Latitude</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={user.geoLocation.coordinates[1]}
-                  onChange={(e) => setUser({
-                    ...user,
-                    geoLocation: {
-                      ...user.geoLocation,
-                      coordinates: [user.geoLocation.coordinates[0], parseFloat(e.target.value)]
+                    className="w-full p-3 border text-black border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                    placeholder="Longitude"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-gray-600 mb-1 block">
+                    Latitude
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={user.geoLocation.coordinates[1]}
+                    onChange={(e) =>
+                      setUser({
+                        ...user,
+                        geoLocation: {
+                          ...user.geoLocation,
+                          coordinates: [
+                            user.geoLocation.coordinates[0],
+                            parseFloat(e.target.value),
+                          ],
+                        },
+                      })
                     }
-                  })}
-                  className="w-full p-3 border text-black border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
-                  placeholder="Latitude"
-                />
+                    className="w-full p-3 border text-black border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                    placeholder="Latitude"
+                  />
+                </div>
               </div>
-            </div>
+
+              {/* ===== Use Current Location Button (ADDED) ===== */}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleGetLocation}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-700 underline"
+                >
+                  Use my current location
+                </button>
+              </div>
+            </>
           )}
         </div>
 
         {message && (
-          <p className={`mt-4 text-sm text-center font-medium ${error ? "text-red-500" : "text-green-500"}`}>
+          <p
+            className={`mt-4 text-sm text-center font-medium ${
+              error ? "text-red-500" : "text-green-500"
+            }`}
+          >
             {message}
           </p>
         )}
@@ -151,6 +235,7 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
           >
             {isView ? "Close" : "Cancel"}
           </button>
+
           {!isView && (
             <button
               className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition disabled:bg-gray-400"
