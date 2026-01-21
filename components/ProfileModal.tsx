@@ -56,6 +56,7 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
     try {
       const response = await api.patch("user/auth/complete-profile", {
         fullName: user.fullName,
+        mobile: user.mobile,
         defaultLocation: {
           address: user.address,
           societyName: user.societyName,
@@ -64,6 +65,16 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
       });
 
       if (response.data.success) {
+        // Sync local state
+        setUser({
+          ...user,
+          fullName: user.fullName,
+          mobile: user.mobile,
+          address: user.address,
+          societyName: user.societyName,
+          geoLocation: user.geoLocation,
+        });
+
         setMessage("Profile updated successfully! 🎉");
         setTimeout(onClose, 2000);
       }
@@ -71,7 +82,7 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
       setError(true);
       setMessage(
         err.response?.data?.message ||
-          "Failed to update profile. Please try again."
+        "Failed to update profile. Please try again."
       );
     } finally {
       setLoading(false);
@@ -103,6 +114,27 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
                 }
                 className="w-full p-3 text-black border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
                 placeholder="Enter your full name"
+              />
+            )}
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold text-gray-600 mb-1 block">
+              Mobile Number
+            </label>
+            {isView ? (
+              <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-800 font-medium">
+                {user.mobile || "Not provided"}
+              </p>
+            ) : (
+              <input
+                type="tel"
+                value={user.mobile || ""}
+                onChange={(e) =>
+                  setUser({ ...user, mobile: e.target.value })
+                }
+                className="w-full p-3 border text-black border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                placeholder="Enter your mobile number"
               />
             )}
           </div>
@@ -219,9 +251,8 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
 
         {message && (
           <p
-            className={`mt-4 text-sm text-center font-medium ${
-              error ? "text-red-500" : "text-green-500"
-            }`}
+            className={`mt-4 text-sm text-center font-medium ${error ? "text-red-500" : "text-green-500"
+              }`}
           >
             {message}
           </p>
@@ -250,3 +281,57 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// {
+//     kitchenId,                    // From first cart item
+//     delivery: {
+//         mode: "KITCHEN_DELIVERY" | "SELF_DELIVERY" | "SELF_PICKUP",
+//         address: {
+//             addressLine: user.address,        // From user context
+//             societyName: user.societyName,    // From user context  
+//             geoLocation: {
+//                 type: "Point",
+//                 coordinates: user.geoLocation.coordinates  // From user context
+//             }
+//         }
+//     }
+// }
+
+
+
+
+
+
+
+
+
+
+
+// {
+//   "kitchenId": "695f356e76d3b958908d1da5",
+//   "delivery": {
+//     "mode": "KITCHEN_DELIVERY",
+//     "address": {
+//       "addressLine": "Flat 402, Tower B",
+//       "societyName": "Sector 62 A Block",
+//       "geoLocation": {
+//         "type": "Point",
+//         "coordinates": [77.3649, 28.6289]
+//       }
+//     }
+//   }
+// }

@@ -19,3 +19,10 @@ api.interceptors.request.use((config) => {
 });
 
 export default api;
+
+
+
+// GET /notifications
+// Accept request	POST /connect/accept
+// Reject request	POST /connect/reject
+// View profile	GET /profile/:id

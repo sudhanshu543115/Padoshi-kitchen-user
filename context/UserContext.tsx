@@ -7,6 +7,7 @@ interface UserContextType {
         fullName: string;
         address: string;
         societyName: string;
+        mobile?: string;
         geoLocation: { coordinates: number[] };
     };
     setUser: React.Dispatch<React.SetStateAction<any>>;
@@ -19,6 +20,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         fullName: "Sudhanshu Dubey",
         address: "8th Floor , Tower C , BHutani Alphathum",
         societyName: "Sector 62 Noida",
+        mobile: "9876543210",
         geoLocation: { coordinates: [77.3649, 28.6289] },
     });
 

@@ -1,0 +1,17 @@
+{
+    "kitchenId": "69660c8b91abdfe2dc635196",
+    "delivery": {
+        "mode": "KITCHEN_DELIVERY",
+        "address": {
+            "addressLine": "8th Floor , Tower C , BHutani Alphathum",
+            "societyName": "Sector 62 Noida",
+            "geoLocation": {
+                "type": "Point",
+                "coordinates": [
+                    77.3649,
+                    28.6289
+                ]
+            }
+        }
+    }
+}

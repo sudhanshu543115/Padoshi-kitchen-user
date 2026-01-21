@@ -6,11 +6,14 @@ import api from "@/api/axios";
 import { useState } from "react";
 import Image from "next/image";
 
+import { useRouter } from "next/navigation";
+
 interface CartModalProps {
     onClose: () => void;
 }
 
 export default function CartModal({ onClose }: CartModalProps) {
+    const router = useRouter();
     const { cart, removeFromCart, updateQuantity, loading, totalItems, clearCart } = useCart();
     const { user } = useUser();
     const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -183,8 +186,18 @@ export default function CartModal({ onClose }: CartModalProps) {
                                 <span>₹{subtotal.toFixed(2)}</span>
                             </div>
                         </div>
-
                         <button
+                            onClick={() => {
+                                onClose();
+                                router.push("/checkout/address");
+                            }}
+
+                            className={`w-full ${isCheckingOut ? 'bg-gray-400' : 'bg-gray-900 hover:bg-orange-600'} text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-sm transition-all shadow-xl hover:scale-[1.02] active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2`}
+                        >
+                            ADD ADDRESS
+                        </button>
+
+                        {/* <button
                             onClick={handleCheckout}
                             disabled={isCheckingOut}
                             className={`w-full ${isCheckingOut ? 'bg-gray-400' : 'bg-gray-900 hover:bg-orange-600'} text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-sm transition-all shadow-xl hover:scale-[1.02] active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2`}
@@ -200,7 +213,7 @@ export default function CartModal({ onClose }: CartModalProps) {
                         </button>
                         <p className="text-center text-[10px] text-gray-400 font-bold uppercase tracking-widest">
                             Secure Payment Powered by Padoshi Pay
-                        </p>
+                        </p> */}
                     </div>
                 )}
             </div>
