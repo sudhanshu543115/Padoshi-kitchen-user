@@ -29,6 +29,12 @@ export default function DeliveryDetailsPage() {
   const [addresses, setAddresses] = useState<any[]>([]);
   const [defaultAddress, setDefaultAddress] = useState<any>(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const paymentMethodMap: Record<string, string> = {
+  upi: "UPI",
+  card: "CARD",
+  cod: "COD",
+  wallet: "WALLET",
+};
 
   /* -------------------- DELIVERY MODE MAP -------------------- */
   const deliveryModeMap: Record<string, string> = {
@@ -71,48 +77,87 @@ export default function DeliveryDetailsPage() {
   }, []);
 
   /* -------------------- PLACE ORDER -------------------- */
-  const handlePlaceOrder = async () => {
-    if (!cart.length) {
-      alert("Your cart is empty");
+const handlePlaceOrder = async () => {
+  if (!cart.length) {
+    alert("Your cart is empty");
+    return;
+  }
+
+  if (deliveryMode !== "pickup" && !defaultAddress) {
+    alert("Please select a delivery address");
+    return;
+  }
+
+  // 🔹 NON-COD PAYMENT FLOWS
+  if (paymentMethod !== "cod") {
+    if (paymentMethod === "upi") {
+      router.push("/checkout/delivery/payment/upi");
       return;
     }
 
-    if (deliveryMode !== "pickup" && !defaultAddress) {
-      alert("Please select a delivery address");
+    if (paymentMethod === "card") {
+      router.push("/checkout/delivery/payment/card");
       return;
     }
 
-    setIsPlacingOrder(true);
-
-    try {
-      const payload: any = {
-        delivery: {
-          mode: deliveryModeMap[deliveryMode],
-        },
-        payment: {
-          method: paymentMethod === "cod" ? "COD" : "ONLINE",
-        },
-      };
-
-      // Address required only for delivery
-      if (deliveryMode !== "pickup") {
-        payload.delivery.addressId = defaultAddress._id;
-      }
-
-      const res = await api.post("user/cart/checkout", payload);
-
-      if (res.data.success) {
-        router.push('/discover');
-      } else {
-        alert(res.data.message || "Checkout failed");
-      }
-    } catch (err: any) {
-      console.error("Checkout error", err);
-      alert(err?.response?.data?.message || "Checkout failed");
-    } finally {
-      setIsPlacingOrder(false);
+    if (paymentMethod === "wallet") {
+      router.push("/checkout/delivery/payment/wallet");
+      return;
     }
-  };
+  }
+
+  // 🔹 COD FLOW (existing behavior)
+  setIsPlacingOrder(true);
+
+  try {
+    const payload: any = {
+      delivery: {
+        mode: deliveryModeMap[deliveryMode],
+      },
+      payment: {
+        method: paymentMethodMap[paymentMethod],
+      },
+    };
+
+    if (deliveryMode !== "pickup") {
+      payload.delivery.addressId = defaultAddress._id;
+    }
+
+    const res = await api.post("user/cart/checkout", payload);
+
+    if (res.data.success) {
+      router.push("/discover");
+    } else {
+      alert(res.data.message || "Checkout failed");
+    }
+  } catch (err: any) {
+    console.error("Checkout error", err);
+    alert(err?.response?.data?.message || "Checkout failed");
+  } finally {
+    setIsPlacingOrder(false);
+  }
+};
+
+
+
+
+  const getPayButtonLabel = () => {
+  switch (paymentMethod) {
+    case "cod":
+      return "Place Order";
+    case "upi":
+      return "Pay with UPI";
+    case "card":
+      return "Add Card Details";
+    case "wallet":
+      return "Pay from Wallet";
+    default:
+      return "Place Order";
+  }
+};
+
+
+
 
   /* -------------------- UI -------------------- */
   return (
@@ -230,7 +275,9 @@ export default function DeliveryDetailsPage() {
                 <div className="space-y-3 pl-4">
                     {[
                         { id: "upi", label: "UPI / Online Payment", icon: <CreditCardIcon />, sub: "GPay, PhonePe, Cards" },
-                        { id: "cod", label: "Cash on Delivery", icon: <CashIcon />, sub: "Pay when it arrives" },
+                        { id: "cod", label: "Cash on Delivery", icon: <CashIcon />, sub: "Pay when it arrives" } ,
+                         { id: "card", label: "Card Payment", icon: <CreditCardIcon />, sub: "GPay, PhonePe, Cards" },
+                        { id: "wallet", label: "Wallet", icon: <CashIcon />, sub: "Pay when it arrives" } ,
                     ].map((m) => (
                         <button
                             key={m.id}
@@ -318,7 +365,8 @@ export default function DeliveryDetailsPage() {
                             </>
                         ) : (
                             <>
-                                Place Order <ChevronRight />
+                               {getPayButtonLabel()} <ChevronRight />
+ 
                             </>
                         )}
                     </button>

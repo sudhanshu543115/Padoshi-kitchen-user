@@ -208,7 +208,7 @@ export default function CartModal({ onClose }: CartModalProps) {
                 {/* Footer / Checkout Section - Sticky Bottom */}
                 {cart.length > 0 && (
                     <div className="p-8 bg-white border-t border-slate-100 space-y-6 shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.1)] z-20 shrink-0 pb-10">
-                        <div className="space-y-3">
+                        {/* <div className="space-y-3">
                             <div className="flex justify-between text-base text-slate-500 font-medium">
                                 <span>Subtotal</span>
                                 <span className="text-slate-900 font-bold">₹{subtotal.toFixed(2)}</span>
@@ -221,7 +221,7 @@ export default function CartModal({ onClose }: CartModalProps) {
                                 <span>Total</span>
                                 <span>₹{subtotal.toFixed(2)}</span>
                             </div>
-                        </div>
+                        </div> */}
 
                         <button
                             onClick={() => {
