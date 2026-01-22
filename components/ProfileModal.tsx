@@ -1,7 +1,8 @@
 "use client";
 
 import { useUser } from "@/context/UserContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import api from "@/api/axios";
 
 interface ProfileModalProps {
@@ -10,14 +11,40 @@ interface ProfileModalProps {
 }
 
 export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
-  const { user, setUser } = useUser();
+  const { user, setUser, fetchUserProfile } = useUser();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState(false);
 
+  // Local state for form data to avoid direct mutation of global context
+  const [formData, setFormData] = useState({
+    fullName: "",
+    mobile: "",
+    address: "",
+    societyName: "",
+    geoLocation: { coordinates: [0, 0] as number[] },
+  });
+
   const isView = mode === "view";
 
-  /* ================= GEOLOCATION HANDLER (ADDED) ================= */
+  // Sync local state with global user state when modal opens or user changes
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        fullName: user.fullName || "",
+        mobile: user.mobile || "",
+        address: user.address || "",
+        societyName: user.societyName || "",
+        geoLocation: user.geoLocation || { coordinates: [0, 0] },
+      });
+    }
+  }, [user]);
+
+  // Auto-fetch removed to prevent flickering/data changes on open
+  // The UserContext manages the initial load.
+
+
+  /* ================= GEOLOCATION HANDLER (UPDATED) ================= */
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
       setError(true);
@@ -29,13 +56,13 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
       (position) => {
         const { longitude, latitude } = position.coords;
 
-        setUser({
-          ...user,
+        setFormData((prev) => ({
+          ...prev,
           geoLocation: {
-            ...user.geoLocation,
+            ...prev.geoLocation,
             coordinates: [longitude, latitude],
           },
-        });
+        }));
 
         setError(false);
         setMessage("Location fetched successfully 📍");
@@ -47,32 +74,41 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
     );
   };
   /* =============================================================== */
-
   const handleUpdateProfile = async () => {
     setLoading(true);
     setMessage("");
     setError(false);
 
+    // Validate all required fields
+    if (!formData.fullName || !formData.mobile || !formData.address || !formData.societyName ||
+      !formData.geoLocation.coordinates[0] || !formData.geoLocation.coordinates[1]) {
+      setError(true);
+      setMessage("Please fill in all required fields before saving.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await api.patch("user/auth/complete-profile", {
-        fullName: user.fullName,
-        mobile: user.mobile,
+      const response = await api.patch("user/auth/update-profile", {
+        fullName: formData.fullName,
+        mobile: formData.mobile,
         defaultLocation: {
-          address: user.address,
-          societyName: user.societyName,
-          geoLocation: user.geoLocation,
+          address: formData.address,
+          societyName: formData.societyName,
+          geoLocation: formData.geoLocation,
         },
       });
 
       if (response.data.success) {
-        // Sync local state
+        // Sync local state and mark profile as completed
         setUser({
           ...user,
-          fullName: user.fullName,
-          mobile: user.mobile,
-          address: user.address,
-          societyName: user.societyName,
-          geoLocation: user.geoLocation,
+          fullName: formData.fullName,
+          mobile: formData.mobile,
+          address: formData.address,
+          societyName: formData.societyName,
+          geoLocation: formData.geoLocation,
+          profileCompleted: true, // Mark as completed
         });
 
         setMessage("Profile updated successfully! 🎉");
@@ -89,162 +125,237 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100]">
-      <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl mx-4 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-6 text-gray-800">
-          {isView ? "My Profile" : "Update Profile"}
-        </h2>
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center">
+      <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl mx-4 max-h-[90vh] overflow-y-auto relative">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">
+            {isView ? "My Profile" : "Update Profile"}
+          </h2>
+          {/* Refresh button removed from here */}
+        </div>
 
         <div className="space-y-4">
-          <div>
-            <label className="text-sm font-semibold text-gray-600 mb-1 block">
-              Full Name
-            </label>
-            {isView ? (
-              <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-800 font-medium">
-                {user.fullName}
-              </p>
-            ) : (
-              <input
-                type="text"
-                value={user.fullName}
-                onChange={(e) =>
-                  setUser({ ...user, fullName: e.target.value })
-                }
-                className="w-full p-3 text-black border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
-                placeholder="Enter your full name"
-              />
-            )}
-          </div>
-
-          <div>
-            <label className="text-sm font-semibold text-gray-600 mb-1 block">
-              Mobile Number
-            </label>
-            {isView ? (
-              <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-800 font-medium">
-                {user.mobile || "Not provided"}
-              </p>
-            ) : (
-              <input
-                type="tel"
-                value={user.mobile || ""}
-                onChange={(e) =>
-                  setUser({ ...user, mobile: e.target.value })
-                }
-                className="w-full p-3 border text-black border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
-                placeholder="Enter your mobile number"
-              />
-            )}
-          </div>
-
-          <div>
-            <label className="text-sm font-semibold text-gray-600 mb-1 block">
-              Address
-            </label>
-            {isView ? (
-              <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-black font-medium">
-                {user.address}
-              </p>
-            ) : (
-              <input
-                type="text"
-                value={user.address}
-                onChange={(e) =>
-                  setUser({ ...user, address: e.target.value })
-                }
-                className="w-full p-3 border border-gray-200 text-black rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
-                placeholder="Enter your address"
-              />
-            )}
-          </div>
-
-          <div>
-            <label className="text-sm font-semibold text-gray-600 mb-1 block">
-              Society Name
-            </label>
-            {isView ? (
-              <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-800 font-medium">
-                {user.societyName}
-              </p>
-            ) : (
-              <input
-                type="text"
-                value={user.societyName}
-                onChange={(e) =>
-                  setUser({ ...user, societyName: e.target.value })
-                }
-                className="w-full p-3 border text-black border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
-                placeholder="Enter your society name"
-              />
-            )}
-          </div>
-
-          {!isView && (
+          {/* Only show these fields in View Mode */}
+          {isView ? (
             <>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-semibold text-gray-600 mb-1 block">
-                    Longitude
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={user.geoLocation.coordinates[0]}
-                    onChange={(e) =>
-                      setUser({
-                        ...user,
-                        geoLocation: {
-                          ...user.geoLocation,
-                          coordinates: [
-                            parseFloat(e.target.value),
-                            user.geoLocation.coordinates[1],
-                          ],
-                        },
-                      })
-                    }
-                    className="w-full p-3 border text-black border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
-                    placeholder="Longitude"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-semibold text-gray-600 mb-1 block">
-                    Latitude
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={user.geoLocation.coordinates[1]}
-                    onChange={(e) =>
-                      setUser({
-                        ...user,
-                        geoLocation: {
-                          ...user.geoLocation,
-                          coordinates: [
-                            user.geoLocation.coordinates[0],
-                            parseFloat(e.target.value),
-                          ],
-                        },
-                      })
-                    }
-                    className="w-full p-3 border text-black border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
-                    placeholder="Latitude"
-                  />
-                </div>
+              <div>
+                <label className="text-sm font-semibold text-gray-600 mb-1 block">
+                  Full Name
+                </label>
+                <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-800 font-medium">
+                  {user.fullName || "Not provided"}
+                </p>
               </div>
 
-              {/* ===== Use Current Location Button (ADDED) ===== */}
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleGetLocation}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700 underline"
-                >
-                  Use my current location
-                </button>
+              <div>
+                <label className="text-sm font-semibold text-gray-600 mb-1 block">
+                  Mobile Number
+                </label>
+                <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-800 font-medium">
+                  {user.mobile || "Not provided"}
+                </p>
               </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-600 mb-1 block">
+                  Address
+                </label>
+                <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-800 font-medium">
+                  {user.address || "Not provided"}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-600 mb-1 block">
+                  Society Name
+                </label>
+                <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-800 font-medium">
+                  {user.societyName || "Not provided"}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-600 mb-1 block">
+                  Location Coordinates
+                </label>
+                <div className="p-3 bg-gray-50 border border-gray-100 rounded-xl">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-gray-500 text-xs">Longitude:</span>
+                      <p className="font-mono text-gray-800">{user.geoLocation.coordinates[0] || "Not provided"}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 text-xs">Latitude:</span>
+                      <p className="font-mono text-gray-800">{user.geoLocation.coordinates[1] || "Not provided"}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Edit Mode - Show all fields with local state */
+            <>
+              <div>
+                <label className="text-sm font-semibold text-gray-600 mb-1 block">
+                  User ID
+                </label>
+                <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-800 font-medium">
+                  {user.id}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-600 mb-1 block">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.fullName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, fullName: e.target.value })
+                  }
+                  className="w-full p-3 text-black border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  placeholder="Enter your full name"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-600 mb-1 block">
+                  Role
+                </label>
+                <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-800 font-medium">
+                  {user.role}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-600 mb-1 block">
+                  Profile Status
+                </label>
+                <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl">
+                  <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${user.profileCompleted
+                    ? "bg-green-100 text-green-800"
+                    : "bg-yellow-100 text-yellow-800"
+                    }`}>
+                    <span className={`w-2 h-2 rounded-full ${user.profileCompleted ? "bg-green-500" : "bg-yellow-500"
+                      }`} />
+                    {user.profileCompleted ? "Completed" : "Incomplete"}
+                  </span>
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-600 mb-1 block">
+                  Mobile Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={formData.mobile}
+                  onChange={(e) =>
+                    setFormData({ ...formData, mobile: e.target.value })
+                  }
+                  className="w-full p-3 border text-black border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  placeholder="Enter your mobile number"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-600 mb-1 block">
+                  Address <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) =>
+                    setFormData({ ...formData, address: e.target.value })
+                  }
+                  className="w-full p-3 border border-gray-200 text-black rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  placeholder="Enter your address"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-600 mb-1 block">
+                  Society Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.societyName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, societyName: e.target.value })
+                  }
+                  className="w-full p-3 border text-black border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  placeholder="Enter your society name"
+                />
+              </div>
+
+              {!isView && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-semibold text-gray-600 mb-1 block">
+                        Longitude <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={formData.geoLocation.coordinates[0]}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            geoLocation: {
+                              ...formData.geoLocation,
+                              coordinates: [
+                                parseFloat(e.target.value),
+                                formData.geoLocation.coordinates[1],
+                              ],
+                            },
+                          })
+                        }
+                        className="w-full p-3 border text-black border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                        placeholder="Longitude"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-semibold text-gray-600 mb-1 block">
+                        Latitude <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={formData.geoLocation.coordinates[1]}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            geoLocation: {
+                              ...formData.geoLocation,
+                              coordinates: [
+                                formData.geoLocation.coordinates[0],
+                                parseFloat(e.target.value),
+                              ],
+                            },
+                          })
+                        }
+                        className="w-full p-3 border text-black border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                        placeholder="Latitude"
+                      />
+                    </div>
+                  </div>
+
+                  {/* ===== Use Current Location Button ===== */}
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleGetLocation}
+                      className="text-sm font-medium text-blue-600 hover:text-blue-700 underline"
+                    >
+                      Use my current location
+                    </button>
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
@@ -278,60 +389,7 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// {
-//     kitchenId,                    // From first cart item
-//     delivery: {
-//         mode: "KITCHEN_DELIVERY" | "SELF_DELIVERY" | "SELF_PICKUP",
-//         address: {
-//             addressLine: user.address,        // From user context
-//             societyName: user.societyName,    // From user context  
-//             geoLocation: {
-//                 type: "Point",
-//                 coordinates: user.geoLocation.coordinates  // From user context
-//             }
-//         }
-//     }
-// }
-
-
-
-
-
-
-
-
-
-
-
-// {
-//   "kitchenId": "695f356e76d3b958908d1da5",
-//   "delivery": {
-//     "mode": "KITCHEN_DELIVERY",
-//     "address": {
-//       "addressLine": "Flat 402, Tower B",
-//       "societyName": "Sector 62 A Block",
-//       "geoLocation": {
-//         "type": "Point",
-//         "coordinates": [77.3649, 28.6289]
-//       }
-//     }
-//   }
-// }

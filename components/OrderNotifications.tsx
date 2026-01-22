@@ -7,7 +7,7 @@ const OrderNotifications = () => {
   useUserOrderNotifications({
     onPlaced: (order) => {
       console.log("🛒 Order placed", order);
-      toast.success("Order placed successfully");
+      toast.success("Order placed successfully , please check your orders ");
     },
     onAccepted: (order) => {
       console.log("✅ Order accepted", order);

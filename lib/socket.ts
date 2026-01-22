@@ -9,7 +9,7 @@ export const connectUserSocket = (token: string) => {
   const url = "https://padoshi-kitchen-b.onrender.com";
 
   if (!url) {
-    console.error("Socket URL missing");
+    console.log("Socket URL missing");
     return null;
   }
 
@@ -31,7 +31,7 @@ export const connectUserSocket = (token: string) => {
   });
 
   socket.on("connect_error", (err) => {
-    console.error("Socket error:", err.message);
+    console.log("Socket error:", err.message);
   });
 
   socket.connect();
