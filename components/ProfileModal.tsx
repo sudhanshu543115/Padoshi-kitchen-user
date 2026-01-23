@@ -4,6 +4,7 @@ import { useUser } from "@/context/UserContext";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import api from "@/api/axios";
+import router from "next/router";
 
 interface ProfileModalProps {
   onClose: () => void;
@@ -161,6 +162,7 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
                 <label className="text-sm font-semibold text-gray-600 mb-1 block">
                   Address
                 </label>
+                
                 <p className="p-3 bg-gray-50 border border-gray-100 rounded-xl text-gray-800 font-medium">
                   {user.address || "Not provided"}
                 </p>
@@ -263,6 +265,9 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
               <div>
                 <label className="text-sm font-semibold text-gray-600 mb-1 block">
                   Address <span className="text-red-500">*</span>
+                </label>
+                <label onClick={() => router.push("/checkout/address")} className="text-sm font-semibold text-blue-600 mb-1 block">
+                  Select Address
                 </label>
                 <input
                   type="text"

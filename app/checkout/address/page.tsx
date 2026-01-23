@@ -163,7 +163,7 @@ export default function CheckoutAddressPage() {
 
     // ❌ BLOCK DB SAVE IF EXISTING DEFAULT ADDRESS
     if (isFromSavedAddress) {
-      router.push("/checkout/delivery");
+      router.push("/discover?openCart=true");
       return;
     }
 
@@ -174,7 +174,7 @@ export default function CheckoutAddressPage() {
 
       if (response.data.success) {
         alert("Address added successfully! 🎉");
-        router.push("/checkout/delivery");
+        router.push("/discover?openCart=true");
       } else {
         alert(
           `Failed to add address: ${response.data.message || "Unknown error"

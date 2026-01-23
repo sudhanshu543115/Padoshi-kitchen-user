@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import { useCart } from "@/context/CartContext";
 import ProfileModal from "@/components/ProfileModal";
@@ -34,13 +34,21 @@ export default function Navbar() {
   const { user } = useUser();
   const { totalItems } = useCart();
   const router = useRouter();
-  
+  const searchParams = useSearchParams();
+
   const [openProfile, setOpenProfile] = useState(false);
   const [openCart, setOpenCart] = useState(false);
   const [openOrders, setOpenOrders] = useState(false);
   const [ordersType, setOrdersType] = useState<"active" | "history">("active");
   const [modalMode, setModalMode] = useState<"view" | "edit">("view");
   const [showDropdown, setShowDropdown] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("openCart") === "true") {
+      setOpenCart(true);
+      // Optional: Clear params or let it be
+    }
+  }, [searchParams]);
 
   const handleLogout = () => {
     setShowDropdown(false);
@@ -70,19 +78,19 @@ export default function Navbar() {
     <nav className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          
+
           {/* Logo Section */}
-          <div 
-            className="flex items-center gap-3 cursor-pointer group" 
+          <div
+            className="flex items-center gap-3 cursor-pointer group"
             onClick={() => router.push("/home")}
           >
             <div className="relative w-10 h-10 group-hover:scale-105 transition-transform duration-200">
-              <Image 
-                src="/logo.png" 
-                alt="Logo" 
-                fill 
+              <Image
+                src="/logo.png"
+                alt="Logo"
+                fill
                 className="object-contain"
-                priority 
+                priority
               />
             </div>
             <span className="font-bold text-xl text-gray-900 tracking-tight group-hover:text-blue-600 transition-colors">
@@ -92,7 +100,7 @@ export default function Navbar() {
 
           {/* Right Actions Section */}
           <div className="flex items-center gap-6">
-            
+
             {/* Cart Button */}
             <button
               className="relative p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all duration-200 group"
@@ -109,12 +117,11 @@ export default function Navbar() {
 
             {/* Profile Dropdown Container */}
             <div className="relative">
-              <button 
+              <button
                 onClick={() => setShowDropdown(!showDropdown)}
                 className="flex items-center focus:outline-none"
               >
-                <div className={`relative w-9 h-9 rounded-full overflow-hidden border-2 transition-all duration-200 ${
-                    showDropdown ? "border-blue-600 ring-2 ring-blue-100" : "border-gray-200 hover:border-blue-400"
+                <div className={`relative w-9 h-9 rounded-full overflow-hidden border-2 transition-all duration-200 ${showDropdown ? "border-blue-600 ring-2 ring-blue-100" : "border-gray-200 hover:border-blue-400"
                   }`}>
                   <Image
                     src="/avatar.png"
@@ -129,13 +136,13 @@ export default function Navbar() {
               {showDropdown && (
                 <>
                   {/* FIX: Increased z-index to 45 so it covers the navbar (z-40) but stays under the menu (z-50) */}
-                  <div 
-                    className="fixed inset-0 z-[45] cursor-default" 
-                    onClick={() => setShowDropdown(false)} 
+                  <div
+                    className="fixed inset-0 z-[45] cursor-default"
+                    onClick={() => setShowDropdown(false)}
                   />
-                  
+
                   <div className="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-gray-100 ring-1 ring-black/5 z-50 animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right overflow-hidden">
-                    
+
                     {/* User Header */}
                     <div className="px-5 py-4 border-b border-gray-50 bg-gray-50/50">
                       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Signed in as</p>
@@ -198,7 +205,15 @@ export default function Navbar() {
 
       {openCart && (
         <CartModal
-          onClose={() => setOpenCart(false)}
+          onClose={() => {
+            setOpenCart(false);
+            // Optional: Remove query param from URL on close
+            const url = new URL(window.location.href);
+            if (url.searchParams.has("openCart")) {
+              url.searchParams.delete("openCart");
+              window.history.replaceState({}, "", url.toString());
+            }
+          }}
         />
       )}
 

@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import { useUser } from "@/context/UserContext";
 import { useCart } from "@/context/CartContext";
 import api from "@/api/axios";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 // --- Icons ---
 const MapPinIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>);
@@ -19,6 +19,7 @@ const ChevronRight = () => (<svg xmlns="http://www.w3.org/2000/svg" fill="none" 
 
 export default function DeliveryDetailsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useUser();
   const { cart } = useCart();
 
@@ -30,11 +31,19 @@ export default function DeliveryDetailsPage() {
   const [defaultAddress, setDefaultAddress] = useState<any>(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const paymentMethodMap: Record<string, string> = {
-  upi: "UPI",
-  card: "CARD",
-  cod: "COD",
-  wallet: "WALLET",
-};
+    upi: "UPI",
+    card: "CARD",
+    cod: "COD",
+    wallet: "WALLET",
+  };
+
+  // Initialize from Query Params
+  useEffect(() => {
+    const mode = searchParams.get('mode');
+    if (mode) setDeliveryMode(mode);
+    const payment = searchParams.get('paymentMethod');
+    if (payment) setPaymentMethod(payment);
+  }, [searchParams]);
 
   /* -------------------- DELIVERY MODE MAP -------------------- */
   const deliveryModeMap: Record<string, string> = {
@@ -63,7 +72,19 @@ export default function DeliveryDetailsPage() {
         const res = await api.get("user/auth/address");
         if (res.data.success) {
           setAddresses(res.data.addresses);
-          const def = res.data.addresses.find((a: any) => a.isDefault);
+
+          // Check for addressId from query param
+          const addressIdParam = searchParams.get('addressId');
+          let def = null;
+
+          if (addressIdParam) {
+            def = res.data.addresses.find((a: any) => a._id === addressIdParam);
+          }
+
+          if (!def) {
+            def = res.data.addresses.find((a: any) => a.isDefault);
+          }
+
           setDefaultAddress(def || res.data.addresses[0] || null);
         }
       } catch (err) {
@@ -74,87 +95,87 @@ export default function DeliveryDetailsPage() {
     };
 
     fetchAddresses();
-  }, []);
+  }, [searchParams]);
 
   /* -------------------- PLACE ORDER -------------------- */
-const handlePlaceOrder = async () => {
-  if (!cart.length) {
-    alert("Your cart is empty");
-    return;
-  }
-
-  if (deliveryMode !== "pickup" && !defaultAddress) {
-    alert("Please select a delivery address");
-    return;
-  }
-
-  // 🔹 NON-COD PAYMENT FLOWS
-  if (paymentMethod !== "cod") {
-    if (paymentMethod === "upi") {
-      router.push("/checkout/delivery/payment/upi");
+  const handlePlaceOrder = async () => {
+    if (!cart.length) {
+      alert("Your cart is empty");
       return;
     }
 
-    if (paymentMethod === "card") {
-      router.push("/checkout/delivery/payment/card");
+    if (deliveryMode !== "pickup" && !defaultAddress) {
+      alert("Please select a delivery address");
       return;
     }
 
-    if (paymentMethod === "wallet") {
-      router.push("/checkout/delivery/payment/wallet");
-      return;
-    }
-  }
+    // 🔹 NON-COD PAYMENT FLOWS
+    if (paymentMethod !== "cod") {
+      if (paymentMethod === "upi") {
+        router.push("/checkout/delivery/payment/upi");
+        return;
+      }
 
-  // 🔹 COD FLOW (existing behavior)
-  setIsPlacingOrder(true);
+      if (paymentMethod === "card") {
+        router.push("/checkout/delivery/payment/card");
+        return;
+      }
 
-  try {
-    const payload: any = {
-      delivery: {
-        mode: deliveryModeMap[deliveryMode],
-      },
-      payment: {
-        method: paymentMethodMap[paymentMethod],
-      },
-    };
-
-    if (deliveryMode !== "pickup") {
-      payload.delivery.addressId = defaultAddress._id;
+      if (paymentMethod === "wallet") {
+        router.push("/checkout/delivery/payment/wallet");
+        return;
+      }
     }
 
-    const res = await api.post("user/cart/checkout", payload);
+    // 🔹 COD FLOW (existing behavior)
+    setIsPlacingOrder(true);
 
-    if (res.data.success) {
-      router.push("/discover");
-    } else {
-      alert(res.data.message || "Checkout failed");
+    try {
+      const payload: any = {
+        delivery: {
+          mode: deliveryModeMap[deliveryMode],
+        },
+        payment: {
+          method: paymentMethodMap[paymentMethod],
+        },
+      };
+
+      if (deliveryMode !== "pickup") {
+        payload.delivery.addressId = defaultAddress._id;
+      }
+
+      const res = await api.post("user/cart/checkout", payload);
+
+      if (res.data.success) {
+        router.push("/discover");
+      } else {
+        alert(res.data.message || "Checkout failed");
+      }
+    } catch (err: any) {
+      console.error("Checkout error", err);
+      alert(err?.response?.data?.message || "Checkout failed");
+    } finally {
+      setIsPlacingOrder(false);
     }
-  } catch (err: any) {
-    console.error("Checkout error", err);
-    alert(err?.response?.data?.message || "Checkout failed");
-  } finally {
-    setIsPlacingOrder(false);
-  }
-};
+  };
 
 
 
 
   const getPayButtonLabel = () => {
-  switch (paymentMethod) {
-    case "cod":
-      return "Place Order";
-    case "upi":
-      return "Pay with UPI";
-    case "card":
-      return "Add Card Details";
-    case "wallet":
-      return "Pay from Wallet";
-    default:
-      return "Place Order";
-  }
-};
+    switch (paymentMethod) {
+      case "cod":
+        return "Place Order";
+      case "upi":
+        return "Pay with UPI";
+      case "card":
+        return "Add Card Details";
+      case "wallet":
+        return "Pay from Wallet";
+      default:
+        return "Place Order";
+    }
+  };
 
 
 
@@ -166,215 +187,212 @@ const handlePlaceOrder = async () => {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
         <header className="mb-8">
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Checkout</h1>
-            <p className="text-slate-500 mt-1">Review your details and complete the order.</p>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Checkout</h1>
+          <p className="text-slate-500 mt-1">Review your details and complete the order.</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
+
           {/* LEFT COLUMN: Options */}
           <div className="lg:col-span-8 space-y-6">
-            
+
             {/* 1. DELIVERY ADDRESS (Conditional) */}
             {deliveryMode !== "pickup" && (
               <section className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-slate-200"></div>
                 <div className="flex justify-between items-center mb-4 pl-4">
-                    <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <span className="bg-slate-100 p-1.5 rounded-full"><MapPinIcon /></span> 
-                        Delivery Address
-                    </h2>
-                    <button 
-                        onClick={() => router.push("/checkout/address")} 
-                        className="text-orange-600 text-sm font-bold hover:underline"
-                    >
-                        {defaultAddress ? "Change" : "+ Add"}
-                    </button>
+                  <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <span className="bg-slate-100 p-1.5 rounded-full"><MapPinIcon /></span>
+                    Delivery Address
+                  </h2>
+                  <button
+                    onClick={() => router.push("/checkout/address")}
+                    className="text-orange-600 text-sm font-bold hover:underline"
+                  >
+                    {defaultAddress ? "Change" : "+ Add"}
+                  </button>
                 </div>
 
                 <div className="pl-4">
-                    {loading ? (
+                  {loading ? (
                     <div className="space-y-2 animate-pulse">
-                        <div className="h-4 bg-slate-100 rounded w-1/3"></div>
-                        <div className="h-4 bg-slate-100 rounded w-2/3"></div>
+                      <div className="h-4 bg-slate-100 rounded w-1/3"></div>
+                      <div className="h-4 bg-slate-100 rounded w-2/3"></div>
                     </div>
-                    ) : defaultAddress ? (
+                  ) : defaultAddress ? (
                     <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 flex gap-4 items-start">
-                        <div className="bg-white p-2 rounded-full text-orange-600 shadow-sm">
-                            <MapPinIcon />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs font-black uppercase tracking-wider bg-white px-2 py-0.5 rounded border border-orange-100 text-orange-600">
-                                    {defaultAddress.label || "Home"}
-                                </span>
-                            </div>
-                            <p className="font-bold text-slate-800 leading-tight">{defaultAddress.addressLine}</p>
-                            <p className="text-sm text-slate-500 mt-0.5">{defaultAddress.societyName}</p>
-                        </div>
-                    </div>
-                    ) : (
-                    <button
-                        onClick={() => router.push("/checkout/address")}
-                        className="w-full py-8 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 font-medium hover:border-orange-400 hover:text-orange-600 transition-colors flex flex-col items-center justify-center gap-2"
-                    >
+                      <div className="bg-white p-2 rounded-full text-orange-600 shadow-sm">
                         <MapPinIcon />
-                        Add a delivery address
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-black uppercase tracking-wider bg-white px-2 py-0.5 rounded border border-orange-100 text-orange-600">
+                            {defaultAddress.label || "Home"}
+                          </span>
+                        </div>
+                        <p className="font-bold text-slate-800 leading-tight">{defaultAddress.addressLine}</p>
+                        <p className="text-sm text-slate-500 mt-0.5">{defaultAddress.societyName}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => router.push("/checkout/address")}
+                      className="w-full py-8 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 font-medium hover:border-orange-400 hover:text-orange-600 transition-colors flex flex-col items-center justify-center gap-2"
+                    >
+                      <MapPinIcon />
+                      Add a delivery address
                     </button>
-                    )}
+                  )}
                 </div>
               </section>
             )}
 
             {/* 2. DELIVERY OPTION */}
             <section className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-slate-200"></div>
-                <h2 className="text-lg font-bold text-slate-800 mb-4 pl-4 flex items-center gap-2">
-                    <span className="bg-slate-100 p-1.5 rounded-full"><BikeIcon /></span>
-                    Delivery Method
-                </h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pl-4">
-                    {[
-                        { id: "platform", label: "Kitchen Rider", icon: <BikeIcon />, desc: "Fastest" },
-                        { id: "own", label: "Third Party", icon: <UserIcon />, desc: "Dunzo" },
-                        { id: "pickup", label: "Self Pickup", icon: <StoreIcon />, desc: "No Fee" },
-                    ].map((opt) => (
-                        <button
-                        key={opt.id}
-                        onClick={() => setDeliveryMode(opt.id)}
-                        className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 group ${
-                            deliveryMode === opt.id
-                            ? "border-orange-500 bg-orange-50 shadow-md"
-                            : "border-slate-100 bg-slate-50/50 hover:border-orange-200 hover:bg-white"
-                        }`}
-                        >
-                            {deliveryMode === opt.id && (
-                                <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-orange-500 flex items-center justify-center">
-                                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M5 13l4 4L19 7" /></svg>
-                                </div>
-                            )}
-                            <div className={`mb-3 ${deliveryMode === opt.id ? "text-orange-600" : "text-slate-400 group-hover:text-orange-500"}`}>
-                                {opt.icon}
-                            </div>
-                            <div className="font-bold text-slate-800 text-sm">{opt.label}</div>
-                            <div className="text-xs text-slate-500 font-medium mt-0.5">{opt.desc}</div>
-                        </button>
-                    ))}
-                </div>
+              <div className="absolute top-0 left-0 w-1 h-full bg-slate-200"></div>
+              <h2 className="text-lg font-bold text-slate-800 mb-4 pl-4 flex items-center gap-2">
+                <span className="bg-slate-100 p-1.5 rounded-full"><BikeIcon /></span>
+                Delivery Method
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pl-4">
+                {[
+                  { id: "platform", label: "Kitchen Rider", icon: <BikeIcon />, desc: "Fastest" },
+                  { id: "own", label: "Third Party", icon: <UserIcon />, desc: "Dunzo" },
+                  { id: "pickup", label: "Self Pickup", icon: <StoreIcon />, desc: "No Fee" },
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setDeliveryMode(opt.id)}
+                    className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 group ${deliveryMode === opt.id
+                      ? "border-orange-500 bg-orange-50 shadow-md"
+                      : "border-slate-100 bg-slate-50/50 hover:border-orange-200 hover:bg-white"
+                      }`}
+                  >
+                    {deliveryMode === opt.id && (
+                      <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-orange-500 flex items-center justify-center">
+                        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path d="M5 13l4 4L19 7" /></svg>
+                      </div>
+                    )}
+                    <div className={`mb-3 ${deliveryMode === opt.id ? "text-orange-600" : "text-slate-400 group-hover:text-orange-500"}`}>
+                      {opt.icon}
+                    </div>
+                    <div className="font-bold text-slate-800 text-sm">{opt.label}</div>
+                    <div className="text-xs text-slate-500 font-medium mt-0.5">{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
             </section>
 
             {/* 3. PAYMENT METHOD */}
             <section className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-slate-200"></div>
-                <h2 className="text-lg font-bold text-slate-800 mb-4 pl-4 flex items-center gap-2">
-                    <span className="bg-slate-100 p-1.5 rounded-full"><CreditCardIcon /></span>
-                    Payment
-                </h2>
+              <div className="absolute top-0 left-0 w-1 h-full bg-slate-200"></div>
+              <h2 className="text-lg font-bold text-slate-800 mb-4 pl-4 flex items-center gap-2">
+                <span className="bg-slate-100 p-1.5 rounded-full"><CreditCardIcon /></span>
+                Payment
+              </h2>
 
-                <div className="space-y-3 pl-4">
-                    {[
-                        { id: "upi", label: "UPI / Online Payment", icon: <CreditCardIcon />, sub: "GPay, PhonePe, Cards" },
-                        { id: "cod", label: "Cash on Delivery", icon: <CashIcon />, sub: "Pay when it arrives" } ,
-                         { id: "card", label: "Card Payment", icon: <CreditCardIcon />, sub: "GPay, PhonePe, Cards" },
-                        { id: "wallet", label: "Wallet", icon: <CashIcon />, sub: "Pay when it arrives" } ,
-                    ].map((m) => (
-                        <button
-                            key={m.id}
-                            onClick={() => setPaymentMethod(m.id)}
-                            className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all ${
-                                paymentMethod === m.id
-                                ? "border-orange-500 bg-orange-50 ring-1 ring-orange-500"
-                                : "border-slate-200 hover:border-orange-300 hover:bg-slate-50"
-                            }`}
-                        >
-                            <div className={`p-2 rounded-full ${paymentMethod === m.id ? "bg-white text-orange-600 shadow-sm" : "bg-slate-100 text-slate-500"}`}>
-                                {m.icon}
-                            </div>
-                            <div className="text-left flex-1">
-                                <p className="font-bold text-slate-800">{m.label}</p>
-                                <p className="text-xs text-slate-500">{m.sub}</p>
-                            </div>
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                paymentMethod === m.id ? "border-orange-500" : "border-slate-300"
-                            }`}>
-                                {paymentMethod === m.id && <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />}
-                            </div>
-                        </button>
-                    ))}
-                </div>
+              <div className="space-y-3 pl-4">
+                {[
+                  { id: "upi", label: "UPI / Online Payment", icon: <CreditCardIcon />, sub: "GPay, PhonePe, Cards" },
+                  { id: "cod", label: "Cash on Delivery", icon: <CashIcon />, sub: "Pay when it arrives" },
+                  { id: "card", label: "Card Payment", icon: <CreditCardIcon />, sub: "GPay, PhonePe, Cards" },
+                  { id: "wallet", label: "Wallet", icon: <CashIcon />, sub: "Pay when it arrives" },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setPaymentMethod(m.id)}
+                    className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all ${paymentMethod === m.id
+                      ? "border-orange-500 bg-orange-50 ring-1 ring-orange-500"
+                      : "border-slate-200 hover:border-orange-300 hover:bg-slate-50"
+                      }`}
+                  >
+                    <div className={`p-2 rounded-full ${paymentMethod === m.id ? "bg-white text-orange-600 shadow-sm" : "bg-slate-100 text-slate-500"}`}>
+                      {m.icon}
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className="font-bold text-slate-800">{m.label}</p>
+                      <p className="text-xs text-slate-500">{m.sub}</p>
+                    </div>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === m.id ? "border-orange-500" : "border-slate-300"
+                      }`}>
+                      {paymentMethod === m.id && <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
             </section>
           </div>
 
           {/* RIGHT COLUMN: Summary */}
           <div className="lg:col-span-4">
             <div className="bg-white rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/50 sticky top-24 overflow-hidden">
-                {/* Receipt Header */}
-                <div className="bg-slate-900 px-6 py-4">
-                    <h3 className="font-bold text-white flex items-center gap-2">
-                        Order Summary
-                    </h3>
+              {/* Receipt Header */}
+              <div className="bg-slate-900 px-6 py-4">
+                <h3 className="font-bold text-white flex items-center gap-2">
+                  Order Summary
+                </h3>
+              </div>
+
+              <div className="p-6">
+                {/* Bill Details */}
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Item Total</span>
+                    <span className="font-medium text-slate-900">₹{subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Delivery Fee</span>
+                    {deliveryFee === 0 ? (
+                      <span className="text-green-600 font-bold">FREE</span>
+                    ) : (
+                      <span className="font-medium text-slate-900">₹{deliveryFee}</span>
+                    )}
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Platform Fee</span>
+                    <span className="font-medium text-slate-900">₹0.00</span>
+                  </div>
                 </div>
 
-                <div className="p-6">
-                    {/* Bill Details */}
-                    <div className="space-y-3 text-sm">
-                        <div className="flex justify-between text-slate-600">
-                            <span>Item Total</span>
-                            <span className="font-medium text-slate-900">₹{subtotal.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-slate-600">
-                            <span>Delivery Fee</span>
-                            {deliveryFee === 0 ? (
-                                <span className="text-green-600 font-bold">FREE</span>
-                            ) : (
-                                <span className="font-medium text-slate-900">₹{deliveryFee}</span>
-                            )}
-                        </div>
-                        <div className="flex justify-between text-slate-600">
-                            <span>Platform Fee</span>
-                            <span className="font-medium text-slate-900">₹0.00</span>
-                        </div>
-                    </div>
-
-                    {/* Dashed Separator */}
-                    <div className="my-6 border-t-2 border-dashed border-slate-200 relative">
-                        <div className="absolute -top-1.5 -left-8 w-3 h-3 bg-slate-50 rounded-full"></div>
-                        <div className="absolute -top-1.5 -right-8 w-3 h-3 bg-slate-50 rounded-full"></div>
-                    </div>
-
-                    {/* Total */}
-                    <div className="flex justify-between items-center mb-6">
-                        <span className="font-bold text-slate-800 text-lg">To Pay</span>
-                        <span className="font-black text-2xl text-slate-900">₹{total.toFixed(2)}</span>
-                    </div>
-
-                    {/* Action Button */}
-                    <button
-                        onClick={handlePlaceOrder}
-                        disabled={
-                        isPlacingOrder ||
-                        (deliveryMode !== "pickup" && !defaultAddress)
-                        }
-                        className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-orange-500/30 transition-all transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
-                    >
-                        {isPlacingOrder ? (
-                            <>
-                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                Processing
-                            </>
-                        ) : (
-                            <>
-                               {getPayButtonLabel()} <ChevronRight />
- 
-                            </>
-                        )}
-                    </button>
-
-                    <p className="text-[10px] text-center text-slate-400 mt-4 px-4 leading-tight">
-                        By placing an order, you agree to Padoshi Kitchen's Terms of Service and Privacy Policy.
-                    </p>
+                {/* Dashed Separator */}
+                <div className="my-6 border-t-2 border-dashed border-slate-200 relative">
+                  <div className="absolute -top-1.5 -left-8 w-3 h-3 bg-slate-50 rounded-full"></div>
+                  <div className="absolute -top-1.5 -right-8 w-3 h-3 bg-slate-50 rounded-full"></div>
                 </div>
+
+                {/* Total */}
+                <div className="flex justify-between items-center mb-6">
+                  <span className="font-bold text-slate-800 text-lg">To Pay</span>
+                  <span className="font-black text-2xl text-slate-900">₹{total.toFixed(2)}</span>
+                </div>
+
+                {/* Action Button */}
+                <button
+                  onClick={handlePlaceOrder}
+                  disabled={
+                    isPlacingOrder ||
+                    (deliveryMode !== "pickup" && !defaultAddress)
+                  }
+                  className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-orange-500/30 transition-all transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
+                >
+                  {isPlacingOrder ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      Processing
+                    </>
+                  ) : (
+                    <>
+                      {getPayButtonLabel()} <ChevronRight />
+
+                    </>
+                  )}
+                </button>
+
+                <p className="text-[10px] text-center text-slate-400 mt-4 px-4 leading-tight">
+                  By placing an order, you agree to Padoshi Kitchen's Terms of Service and Privacy Policy.
+                </p>
+              </div>
             </div>
           </div>
 
