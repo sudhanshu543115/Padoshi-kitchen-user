@@ -6,6 +6,7 @@ import api from "@/api/axios";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 // --- Icons ---
 const CloseIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>);
@@ -38,7 +39,19 @@ export default function CartModal({ onClose }: CartModalProps) {
     const [paymentMethod, setPaymentMethod] = useState("online"); // online | cod
     const [addresses, setAddresses] = useState<any[]>([]);
     const [defaultAddress, setDefaultAddress] = useState<any>(null);
-    const [kitchenInfo, setKitchenInfo] = useState<any>(null);
+    // const [kitchenInfo, setKitchenInfo] = useState<any>(null);
+
+
+
+    const [pricing, setPricing] = useState<{
+        foodTotal: number;
+        deliveryCharge: number;
+        finalAmount: number;
+    } | null>(null);
+
+    const [pricingLoading, setPricingLoading] = useState(false);
+
+
 
     // Mappings for API
     const deliveryModeMap: Record<string, string> = {
@@ -51,6 +64,47 @@ export default function CartModal({ onClose }: CartModalProps) {
         online: "UPI",
         cod: "COD",
     };
+
+
+    const fetchPricingPreview = async () => {
+        if (!cart.length) {
+            setPricing(null);
+            return;
+        }
+
+        try {
+            setPricingLoading(true);
+
+            const payload: any = {
+                delivery: {
+                    mode: deliveryModeMap[deliveryMode] || "PADOSHI_DELIVERY",
+                },
+            };
+
+            if (deliveryMode !== "pickup" && defaultAddress?._id) {
+                payload.delivery.addressId = defaultAddress._id;
+            }
+
+            const res = await api.post(
+                "user/cart/checkout/preview",
+                payload
+            );
+
+            if (res.data.success) {
+                setPricing(res.data.pricing);
+            }
+        } catch (err) {
+            console.error("Pricing preview failed", err);
+            setPricing(null);
+        } finally {
+            setPricingLoading(false);
+        }
+    };
+
+
+
+
+
 
     // Fetch Initial Data (Addresses & Kitchen Capabilities)
     useEffect(() => {
@@ -67,22 +121,22 @@ export default function CartModal({ onClose }: CartModalProps) {
                 }
 
                 // 2. Fetch Kitchen Capabilities
-                const kitchenId = cart[0].kitchenId;
-                const kitchenRes = await api.get(`user/kitchens/${kitchenId}`);
-                console.log("Kitchen Data:", kitchenRes.data);
+                // const kitchenId = cart[0].kitchenId;
+                // const kitchenRes = await api.get(`user/kitchens/${kitchenId}`);
+                // console.log("Kitchen Data:", kitchenRes.data);
 
-                if (kitchenRes.data.success) {
-                    const k = kitchenRes.data.kitchen;
-                    setKitchenInfo({
-                        ...k,
-                        deliveryCapabilities: k.deliveryCapabilities || {
-                            ownRider: true,
-                            partner: true,
-                            thirdParty: true
-                        },
-                        deliveryPricing: k.deliveryPricing
-                    });
-                }
+                // if (kitchenRes.data.success) {
+                //     const k = kitchenRes.data.kitchen;
+                //     setKitchenInfo({
+                //         ...k,
+                //         deliveryCapabilities: k.deliveryCapabilities || {
+                //             ownRider: true,
+                //             partner: true,
+                //             thirdParty: true
+                //         },
+                //         deliveryPricing: k.deliveryPricing
+                //     });
+                // }
             } catch (error) {
                 console.error("Failed to load delivery options:", error);
             }
@@ -90,6 +144,11 @@ export default function CartModal({ onClose }: CartModalProps) {
 
         fetchInitialData();
     }, [cart]);
+
+    useEffect(() => {
+        fetchPricingPreview();
+    }, [cart, deliveryMode, defaultAddress]);
+
 
     const handleProceed = () => {
         if (view === 'cart') {
@@ -105,7 +164,7 @@ export default function CartModal({ onClose }: CartModalProps) {
 
         // Validation for delivery
         if (deliveryMode !== "pickup" && !defaultAddress) {
-            alert("Please select a delivery address");
+            toast.error("Please select a delivery address");
             return;
         }
 
@@ -130,12 +189,16 @@ export default function CartModal({ onClose }: CartModalProps) {
                 const res = await api.post("user/cart/checkout", payload);
 
                 if (res.data.success) {
+                    toast.success("Order placed successfully! 🚀");
                     clearCart();
                     onClose();
-                    // Redirect to home or logic page, similar to checkout page behavior
-                    router.push("/discover");
+
+                    // Delay redirect slightly to let user see the success toast
+                    setTimeout(() => {
+                        router.push("/discover");
+                    }, 1500);
                 } else {
-                    alert(res.data.message || "Checkout failed");
+                    toast.error(res.data.message || "Checkout failed");
                 }
 
             } else {
@@ -147,23 +210,29 @@ export default function CartModal({ onClose }: CartModalProps) {
 
         } catch (err: any) {
             console.error("Checkout error", err);
-            alert(err?.response?.data?.message || "Checkout failed");
+            toast.error(err?.response?.data?.message || "Checkout failed");
         } finally {
             setIsCheckingOut(false);
         }
     };
 
-    const subtotal = cart.reduce((sum, item) => {
-        const itemPrice = parseFloat(item.price.replace("₹", ""));
-        const addonsPrice = item.addons.reduce((aSum, a) => aSum + (a.price || 0), 0);
-        return sum + (itemPrice + addonsPrice) * item.quantity;
-    }, 0);
+    // const subtotal = cart.reduce((sum, item) => {
+    //     const itemPrice = parseFloat(item.price.replace("₹", ""));
+    //     const addonsPrice = item.addons.reduce((aSum, a) => aSum + (a.price || 0), 0);
+    //     return sum + (itemPrice + addonsPrice) * item.quantity;
+    // }, 0);
 
-    let deliveryFee = 0;
-    if (deliveryMode === 'platform') deliveryFee = kitchenInfo?.deliveryPricing?.baseFee || 40;
-    if (deliveryMode === 'pickup') deliveryFee = 0;
+    // let deliveryFee = 0;
+    // if (deliveryMode === 'platform') deliveryFee = kitchenInfo?.deliveryPricing?.baseFee || 40;
+    // if (deliveryMode === 'pickup') deliveryFee = 0;
 
-    const total = subtotal + deliveryFee;
+    // const total = subtotal + deliveryFee;
+
+
+    const subtotal = pricing?.foodTotal || 0;
+    const deliveryFee = pricing?.deliveryCharge || 0;
+    const total = pricing?.finalAmount || 0;
+
 
     return (
         <div className="fixed inset-0 z-[9999] flex justify-end font-sans">
@@ -498,3 +567,5 @@ export default function CartModal({ onClose }: CartModalProps) {
         </div>
     );
 }
+
+

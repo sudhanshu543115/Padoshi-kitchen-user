@@ -34,6 +34,9 @@ export default function allKitchen() {
   const [loading, setLoading] = useState(true);
   const [filterSociety, setFilterSociety] = useState("");
   const [range, setRange] = useState<number>(3);
+  const [societies, setSocieties] = useState<string[]>([]);
+const [societyLoading, setSocietyLoading] = useState(false);
+
 
   const fetchKitchens = useCallback(async () => {
     if (!user?.geoLocation?.coordinates) return;
@@ -85,6 +88,37 @@ export default function allKitchen() {
       r.society.toLowerCase().includes(filterSociety.toLowerCase())
   );
 
+
+
+
+  const fetchSocieties = useCallback(async () => {
+  setSocietyLoading(true);
+  try {
+    const res = await api.get("user/kitchens/societies");
+    if (res.data.success) {
+      setSocieties(res.data.societyNames || []);
+    }
+  } catch (err) {
+    console.error("Failed to fetch societies", err);
+    setSocieties([]);
+  } finally {
+    setSocietyLoading(false);
+  }
+}, []);
+
+
+useEffect(() => {
+  fetchKitchens();
+  fetchSocieties();
+}, [fetchKitchens, fetchSocieties]);
+
+
+
+
+
+
+
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
@@ -133,6 +167,32 @@ export default function allKitchen() {
                 className="w-full accent-orange-500"
               />
             </div>
+          </div>
+          <div>
+            <div className="mt-6">
+  <label className="text-xs font-bold uppercase text-black">
+    Select Society
+  </label>
+
+  <select
+    value={filterSociety}
+    onChange={(e) => setFilterSociety(e.target.value)}
+    className="mt-2 w-full px-4 py-3 rounded-xl border bg-slate-50 text-sm text-black"
+  >
+    <option className="" value="">All Societies</option>
+
+    {societyLoading ? (
+      <option disabled>Loading...</option>
+    ) : (
+      societies.map((society) => (
+        <option key={society} value={society}>
+          {society}
+        </option>
+      ))
+    )}
+  </select>
+</div>
+
           </div>
         </aside>
 
@@ -196,6 +256,7 @@ export default function allKitchen() {
             </div>
           )}
         </div>
+        
       </main>
     </div>
   );
