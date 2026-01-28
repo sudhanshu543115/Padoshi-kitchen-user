@@ -51,7 +51,11 @@ export default function DiscoverPage() {
             distance: `${k.distanceKm} km`,
             img: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=500&auto=format",
             isOnline: true,
-            delivery: k.deliveryCapabilities,
+            delivery: {
+              kitchenRider: k.deliveryCapabilities?.KITCHEN_RIDER,
+              selfPickup: k.deliveryCapabilities?.SELF_PICKUP,
+              thirdParty: k.deliveryCapabilities?.THIRD_PARTY,
+            },
             pricing: k.deliveryPricing,
             maxRadius: k.serviceability?.maxDeliveryRadiusKm,
           },
@@ -88,9 +92,9 @@ export default function DiscoverPage() {
           </p>
         </div>
         <div className="flex justify-end ">
-            <button onClick={() => router.push("/discover/allKitchens")} className="bg-orange-500 text-white cursor-pointer px-4 py-2 rounded-lg font-bold hover:bg-orange-600 transition mr-20">
-                View All Kitchens
-            </button>
+          <button onClick={() => router.push("/discover/allKitchens")} className="bg-orange-500 text-white cursor-pointer px-4 py-2 rounded-lg font-bold hover:bg-orange-600 transition mr-20">
+            View All Kitchens
+          </button>
         </div>
       </div>
 
@@ -134,11 +138,12 @@ export default function DiscoverPage() {
 
                   {/* Delivery Info */}
                   <div className="mt-3 space-y-1 text-xs text-slate-600">
-                    <p>🚴 Own Rider: {r.delivery?.ownRider ? "Yes" : "No"}</p>
-                    <p>🤝 Partner Delivery: {r.delivery?.partner ? "Yes" : "No"}</p>
+                    <p>🚴 Kitchen Rider: {r.delivery?.kitchenRider ? "Yes" : "No"}</p>
+                    <p>🧍 Self Pickup: {r.delivery?.selfPickup ? "Yes" : "No"}</p>
                     <p>📦 Third Party: {r.delivery?.thirdParty ? "Yes" : "No"}</p>
                     <p>📍 Max Delivery Radius: {r.maxRadius} km</p>
                   </div>
+
 
                   {/* Pricing */}
                   <div className="mt-3 text-xs text-slate-500">
