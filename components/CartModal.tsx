@@ -44,6 +44,7 @@ export default function CartModal({ onClose }: CartModalProps) {
 
 
     const [pricing, setPricing] = useState<{
+        gstAmount: number;
         foodTotal: number;
         deliveryCharge: number;
         finalAmount: number;
@@ -55,7 +56,7 @@ export default function CartModal({ onClose }: CartModalProps) {
 
     // Mappings for API
     const deliveryModeMap: Record<string, string> = {
-        platform: "PADOSHI_DELIVERY",
+        platform: "KITCHEN_RIDER",
         pickup: "SELF_PICKUP",
         own: "THIRD_PARTY",
     };
@@ -77,7 +78,7 @@ export default function CartModal({ onClose }: CartModalProps) {
 
             const payload: any = {
                 delivery: {
-                    mode: deliveryModeMap[deliveryMode] || "PADOSHI_DELIVERY",
+                    mode: deliveryModeMap[deliveryMode] || "KITCHEN_RIDER",
                 },
             };
 
@@ -228,7 +229,7 @@ export default function CartModal({ onClose }: CartModalProps) {
 
     // const total = subtotal + deliveryFee;
 
-
+    const gst = pricing?.gstAmount || 0;
     const subtotal = pricing?.foodTotal || 0;
     const deliveryFee = pricing?.deliveryCharge || 0;
     const total = pricing?.finalAmount || 0;
@@ -519,8 +520,12 @@ export default function CartModal({ onClose }: CartModalProps) {
                 {/* Footer */}
                 {cart.length > 0 && (
                     <div className="p-6 bg-white border-t border-slate-100 space-y-4 shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.1)] z-20 shrink-0 pb-8">
-                        {view === 'cart' && (
+                        {/* {view === 'cart' && (
                             <div className="space-y-2 text-sm">
+                                <div className="flex justify-between text-slate-600">
+                                    <span>gst</span>
+                                    <span className="font-medium text-green-900">+ 5%</span>
+                                </div>
                                 <div className="flex justify-between text-slate-600">
                                     <span>Item Total</span>
                                     <span className="font-medium text-slate-900">₹{subtotal.toFixed(2)}</span>
@@ -536,7 +541,7 @@ export default function CartModal({ onClose }: CartModalProps) {
                                     <span>₹{total.toFixed(2)}</span>
                                 </div>
                             </div>
-                        )}
+                        )} */}
 
                         <button
                             onClick={view === 'cart' ? handleProceed : handleConfirmOrder}
