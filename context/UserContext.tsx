@@ -35,7 +35,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const fetchUserProfile = useCallback(async () => {
         console.log("Fetching user profile...");
         try {
-            const response = await api.get("user/auth/profile");
+            const response = await api.get("user/profile/me");
             console.log("API Response:", response.data);
             if (response.data.success) {
                 const userData = response.data.user;
