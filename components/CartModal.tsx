@@ -114,7 +114,7 @@ export default function CartModal({ onClose }: CartModalProps) {
 
             try {
                 // 1. Fetch User Addresses
-                const addressRes = await api.get("user/auth/address");
+                const addressRes = await api.get("user/address");
                 if (addressRes.data.success) {
                     setAddresses(addressRes.data.addresses);
                     const def = addressRes.data.addresses.find((a: any) => a.isDefault);
