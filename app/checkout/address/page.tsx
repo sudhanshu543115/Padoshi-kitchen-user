@@ -56,7 +56,7 @@ export default function CheckoutAddressPage() {
 
   const fetchAddresses = async () => {
     try {
-      const response = await api.get("user/auth/address");
+      const response = await api.get("user/address");
       if (response.data.success) {
         setSavedAddresses(response.data.addresses);
       }
@@ -73,7 +73,7 @@ export default function CheckoutAddressPage() {
 
   const handleSetDefault = async (addressId: string) => {
     try {
-      const response = await api.patch(`user/auth/${addressId}/default`);
+      const response = await api.post(`user/address/${addressId}/default`);
       if (response.data.success) {
         const updatedAddresses = response.data.addresses;
         setSavedAddresses(updatedAddresses);
