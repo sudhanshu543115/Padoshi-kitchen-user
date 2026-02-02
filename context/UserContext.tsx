@@ -44,10 +44,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 setUser({
                     id: userData.id || "",
                     fullName: userData.fullName || "",
-                    address: userData.address || "",
-                    societyName: userData.societyName || "",
+                    address: userData.defaultAddress.addressLine || "",
+                    societyName: userData.defaultAddress.societyName || "",
                     mobile: userData.mobile || "",
-                    geoLocation: userData.geoLocation || { coordinates: [0, 0] },
+                    geoLocation: userData.defaultAddress.geoLocation || { coordinates: [0, 0] },
                     role: userData.role || "",
                     profileCompleted: userData.profileCompleted || false,
                 });
