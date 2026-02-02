@@ -35,7 +35,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const fetchUserProfile = useCallback(async () => {
         console.log("Fetching user profile...");
         try {
-            const response = await api.get("user/auth/profile");
+            const response = await api.get("user/profile/me");
             console.log("API Response:", response.data);
             if (response.data.success) {
                 const userData = response.data.user;
@@ -44,10 +44,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 setUser({
                     id: userData.id || "",
                     fullName: userData.fullName || "",
-                    address: userData.address || "",
-                    societyName: userData.societyName || "",
+                    address: userData.defaultAddress.addressLine || "",
+                    societyName: userData.defaultAddress.societyName || "",
                     mobile: userData.mobile || "",
-                    geoLocation: userData.geoLocation || { coordinates: [0, 0] },
+                    geoLocation: userData.defaultAddress.geoLocation || { coordinates: [0, 0] },
                     role: userData.role || "",
                     profileCompleted: userData.profileCompleted || false,
                 });
