@@ -26,6 +26,8 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
     geoLocation: { coordinates: [0, 0] as number[] },
   });
 
+  
+
   const isView = mode === "view";
 
   // Sync local state with global user state when modal opens or user changes
@@ -81,7 +83,7 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
     setError(false);
 
     // Validate all required fields
-    if (!formData.fullName || !formData.mobile || !formData.address || !formData.societyName ||
+    if (!formData.fullName ||  !formData.address || !formData.societyName ||
       !formData.geoLocation.coordinates[0] || !formData.geoLocation.coordinates[1]) {
       setError(true);
       setMessage("Please fill in all required fields before saving.");
@@ -90,9 +92,9 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
     }
 
     try {
-      const response = await api.patch("user/auth/update-profile", {
+      const response = await api.patch("user/profile/complete", {
         fullName: formData.fullName,
-        mobile: formData.mobile,
+       // mobile: formData.mobile,
         defaultLocation: {
           address: formData.address,
           societyName: formData.societyName,
@@ -105,7 +107,7 @@ export default function ProfileModal({ onClose, mode }: ProfileModalProps) {
         setUser({
           ...user,
           fullName: formData.fullName,
-          mobile: formData.mobile,
+         // mobile: formData.mobile,
           address: formData.address,
           societyName: formData.societyName,
           geoLocation: formData.geoLocation,
